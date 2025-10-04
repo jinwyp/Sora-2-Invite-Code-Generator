@@ -143,7 +143,7 @@ const main = async () => {
         // console.log(`Code ${code} failed (403).`);
         triedCodes.add(code);
       }
-      await delay(100); // 30 seconds delay after each attempt
+      await delay(2000); // 30 seconds delay after each attempt
     }));
 
     await saveTriedCodes(triedCodes);

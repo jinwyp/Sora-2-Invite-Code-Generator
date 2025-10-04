@@ -107,7 +107,7 @@ let saveSuccessLock = Promise.resolve();
 const tryInviteCode = async (code) => {
   try {
     const response = await axios.post(BASE_URL, { invite_code: code }, { headers: HEADERS, timeout: 30000 });
-    console.log(`Success code ${code}, got status ${response.status}`);
+    console.log(`=== Success code ${code}, response status ${response.status}`);
     return response.status;
   } catch (error) {
     console.error(`Error trying code ${code}:`, error.message);
@@ -143,7 +143,7 @@ const main = async () => {
         // console.log(`Code ${code} failed (403).`);
         triedCodes.add(code);
       }
-      await delay(2000); // 30 seconds delay after each attempt
+      await delay(5000); // 30 seconds delay after each attempt
     }));
 
     await saveTriedCodes(triedCodes);

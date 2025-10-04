@@ -12,18 +12,20 @@ const SUCCESS_FILE = `success_codes_${todayTagUTC()}.json`;
 const BASE_URL = 'https://sora.chatgpt.com/backend/project_y/invite/accept';
 
 const HEADERS = {
-  accept: '*/*',
-  'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-  authorization: process.env.HTTP_AUTHORIZATION_HEADER,
+  'accept': '*/*',
+  'accept-encoding': 'gzip, deflate, br, zstd',
+  'accept-language': 'en-GB,en;q=0.5',
+  'authorization': process.env.HTTP_AUTHORIZATION_HEADER,
+  'connection': 'keep-alive',
   'content-type': 'application/json',
-  'oai-device-id': 'a97f5433-ea90-47b9-8475-af334139ee0b',
-  priority: 'u=1, i',
-  'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-  'sec-ch-ua-mobile': '?0',
-  'sec-ch-ua-platform': '"Windows"',
+  'host': 'sora.chatgpt.com',
+  'oai-device-id': '9d8b579c-3074-44c0-a3f2-69be5ec1ce9f', // Kept existing device-id
+  'priority': 'u=4',
+  'referer': 'https://sora.chatgpt.com/explore',
   'sec-fetch-dest': 'empty',
   'sec-fetch-mode': 'cors',
-  'sec-fetch-site': 'same-origin'
+  'sec-fetch-site': 'same-origin',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' // Added a default User-Agent
 };
 
 const generateRandomCode = () => {
@@ -108,7 +110,7 @@ const tryInviteCode = async (code) => {
     console.log(`Success code ${code}, got status ${response.status}`);
     return response.status;
   } catch (error) {
-    // console.error(`Error trying code ${code}:`, error.message);
+    console.error(`Error trying code ${code}:`, error.message);
     return error.response ? error.response.status : 5000;
   }
 };
@@ -133,7 +135,7 @@ const main = async () => {
     await Promise.all(batchArray.map(async (code) => {
     //   console.log(`Attempting code: ${code}`);
       const status = await tryInviteCode(code);
-      if (status !== 403) {
+      if (status !== 403 && status !== 401 && status !== 429 && status !== 5000) {
         console.log(`Success! Code ${code} returned status ${status}. Saving...`);
         await saveSuccessCode(code);
         foundSuccess = true;

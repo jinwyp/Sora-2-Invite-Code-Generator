@@ -73,24 +73,34 @@ const loadSuccessCodes = async () => {
 };
 
 const saveSuccessCode = async (code) => {
-  const successes = await loadSuccessCodes();
-  if (!successes.includes(code)) {
-    successes.push(code);
-    await fs.writeFile(SUCCESS_FILE, JSON.stringify(successes, null, 2));
-  }
+  // 使用互斥锁确保同一时间只有一个写入操作
+  saveSuccessLock = saveSuccessLock.then(async () => {
+    const successes = await loadSuccessCodes();
+    if (!successes.includes(code)) {
+      successes.push(code);
+      await fs.writeFile(SUCCESS_FILE, JSON.stringify(successes, null, 2));
+    }
 
-  if (LEGACY_SUCCESS_FILE !== SUCCESS_FILE) {
-    try {
-      await fs.unlink(LEGACY_SUCCESS_FILE);
-    } catch (error) {
-      if (error.code !== 'ENOENT') {
-        console.warn(`Unable to remove legacy success file: ${error.message}`);
+    if (LEGACY_SUCCESS_FILE !== SUCCESS_FILE) {
+      try {
+        await fs.unlink(LEGACY_SUCCESS_FILE);
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          console.warn(`Unable to remove legacy success file: ${error.message}`);
+        }
       }
     }
-  }
+  }).catch((error) => {
+      console.error('Failed to save success code:', error);
+  });
+
+  return saveSuccessLock;
 };
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// 简单的互斥锁实现
+let saveSuccessLock = Promise.resolve();
 
 const tryInviteCode = async (code) => {
   try {
@@ -126,7 +136,7 @@ const main = async () => {
         await saveSuccessCode(code);
         foundSuccess = true;
       } else {
-        console.log(`Code ${code} failed (403).`);
+        // console.log(`Code ${code} failed (403).`);
         triedCodes.add(code);
       }
       await delay(100); // 30 seconds delay after each attempt

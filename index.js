@@ -4,7 +4,11 @@ const axios = require('axios');
 const dotenv = require('dotenv').config()
 
 const TRIED_FILE = 'tried_codes.json';
-const SUCCESS_FILE = 'success_codes.json';
+const LEGACY_SUCCESS_FILE = 'success_codes.json';
+
+const todayTagUTC = () => new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+const SUCCESS_FILE = `success_codes_${todayTagUTC()}.json`;
 const BASE_URL = 'https://sora.chatgpt.com/backend/project_y/invite/accept';
 
 const HEADERS = {
@@ -44,16 +48,45 @@ const saveTriedCodes = async (triedCodes) => {
   await fs.writeFile(TRIED_FILE, JSON.stringify(Array.from(triedCodes), null, 2));
 };
 
-const saveSuccessCode = async (code) => {
+const loadSuccessCodes = async () => {
   try {
     const data = await fs.readFile(SUCCESS_FILE, 'utf8');
-    const successes = JSON.parse(data);
-    if (!successes.includes(code)) {
-      successes.push(code);
-      await fs.writeFile(SUCCESS_FILE, JSON.stringify(successes, null, 2));
-    }
+    return JSON.parse(data);
   } catch (error) {
-    await fs.writeFile(SUCCESS_FILE, JSON.stringify([code], null, 2));
+    if (error.code === 'ENOENT') {
+      try {
+        const legacyData = await fs.readFile(LEGACY_SUCCESS_FILE, 'utf8');
+        const legacyCodes = JSON.parse(legacyData);
+        await fs.writeFile(SUCCESS_FILE, JSON.stringify(legacyCodes, null, 2));
+        return legacyCodes;
+      } catch (legacyError) {
+        if (legacyError.code !== 'ENOENT') {
+          console.warn(`Unable to read legacy success file: ${legacyError.message}`);
+        }
+        return [];
+      }
+    }
+
+    console.warn(`Unable to read success file ${SUCCESS_FILE}: ${error.message}`);
+    return [];
+  }
+};
+
+const saveSuccessCode = async (code) => {
+  const successes = await loadSuccessCodes();
+  if (!successes.includes(code)) {
+    successes.push(code);
+    await fs.writeFile(SUCCESS_FILE, JSON.stringify(successes, null, 2));
+  }
+
+  if (LEGACY_SUCCESS_FILE !== SUCCESS_FILE) {
+    try {
+      await fs.unlink(LEGACY_SUCCESS_FILE);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        console.warn(`Unable to remove legacy success file: ${error.message}`);
+      }
+    }
   }
 };
 

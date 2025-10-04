@@ -1,0 +1,53 @@
+name: Run Invite Code Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_count:
+        description: 'Number of batches to run (default: 1)'
+        required: false
+        default: '1'
+
+jobs:
+  generate-codes:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Create .env file
+        run: |
+          echo "HTTP_AUTHORIZATION_HEADER=${{ secrets.HTTP_AUTHORIZATION_HEADER }}" > .env
+          
+      - name: Run invite code generator
+        run: node index.js
+        env:
+          HTTP_AUTHORIZATION_HEADER: ${{ secrets.HTTP_AUTHORIZATION_HEADER }}
+        continue-on-error: true
+        
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Commit and push results
+        run: |
+          git add success_codes_*.json tried_codes.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update invite codes - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            git push
+          fi

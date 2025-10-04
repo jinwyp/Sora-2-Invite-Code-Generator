@@ -105,9 +105,11 @@ let saveSuccessLock = Promise.resolve();
 const tryInviteCode = async (code) => {
   try {
     const response = await axios.post(BASE_URL, { invite_code: code }, { headers: HEADERS, timeout: 30000 });
+    console.log(`Success code ${code}, got status ${response.status}`);
     return response.status;
   } catch (error) {
-    return error.response ? error.response.status : 0;
+    // console.error(`Error trying code ${code}:`, error.message);
+    return error.response ? error.response.status : 5000;
   }
 };
 
@@ -129,7 +131,7 @@ const main = async () => {
     let foundSuccess = false;
 
     await Promise.all(batchArray.map(async (code) => {
-      console.log(`Attempting code: ${code}`);
+    //   console.log(`Attempting code: ${code}`);
       const status = await tryInviteCode(code);
       if (status !== 403) {
         console.log(`Success! Code ${code} returned status ${status}. Saving...`);

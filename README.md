@@ -32,10 +32,8 @@ This repository includes a GitHub Actions workflow that can be manually triggere
 
 ### Setup
 
-1. Go to your repository **Settings** → **Secrets and variables** → **Actions**
-2. Add a new repository secret:
-   - Name: `HTTP_AUTHORIZATION_HEADER`
-   - Value: Your authorization token (e.g., `Bearer your_token_here`)
+1. Ensure your `.env` file with valid `HTTP_AUTHORIZATION_HEADER` is committed to the repository
+2. The `.env` file is tracked in git for GitHub Actions to use
 
 ### Manual Trigger
 
@@ -46,8 +44,9 @@ This repository includes a GitHub Actions workflow that can be manually triggere
 5. Click the green **Run workflow** button to start
 
 The workflow will:
+- Checkout the repository (including `.env` file)
 - Install dependencies
-- Run the invite code generator
+- Run the invite code generator using the `.env` configuration
 - Automatically commit and push any new success codes and tried codes back to the repository
 
 ## Output files

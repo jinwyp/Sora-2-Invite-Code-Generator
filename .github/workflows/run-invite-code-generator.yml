@@ -26,15 +26,9 @@ jobs:
           
       - name: Install dependencies
         run: npm install
-        
-      - name: Create .env file
-        run: |
-          echo "HTTP_AUTHORIZATION_HEADER=${{ secrets.HTTP_AUTHORIZATION_HEADER }}" > .env
           
       - name: Run invite code generator
         run: node index.js
-        env:
-          HTTP_AUTHORIZATION_HEADER: ${{ secrets.HTTP_AUTHORIZATION_HEADER }}
         continue-on-error: true
         
       - name: Configure git

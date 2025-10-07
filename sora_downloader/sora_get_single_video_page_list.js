@@ -184,15 +184,17 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 								// The rawString contains JavaScript escape sequences like \"
 								// We need to unescape them to get valid JSON
 								let jsonString = rawString
-									.replace(/\\"/g, '"')      // \" -> "
-									.replace(/\\'/g, "'")      // \' -> '
 									.replace(/\\\\/g, '\\')    // \\\\ -> \\
-									.replace(/\\n/g, '\n')     // \\n -> actual newline
-									.replace(/\\r/g, '\r')     // \\r -> carriage return
-									.replace(/\\t/g, '\t');    // \\t -> tab
+									.replace(/\\\"/g, '"')      // \" -> "
+									.replace(/\\\'/g, "'")      // \' -> '
+
+									// .replace(/\\n/g, '\n')     // \\n -> actual newline
+									// .replace(/\\r/g, '\r')     // \\r -> carriage return
+									// .replace(/\\t/g, '\t');    // \\t -> tab
 								
 								// Parse the JSON
 								const parsedData = JSON.parse(jsonString);
+								
 								
 								// The structure is: ["$", "$b", null, {children: [...]}]
 								if (parsedData && Array.isArray(parsedData) && parsedData.length > 3) {

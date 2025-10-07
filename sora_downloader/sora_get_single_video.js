@@ -117,28 +117,28 @@ function safeParseUrl(rawUrl) {
 async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, promptValue, headers, agent, videoData }) {
 	
 	// Write JSON data to file
-	const jsonFileName = `${videoData.post.id}_data.json`;
+	const dateStamp = formatDateStamp();
+
+	const jsonFileName = `${dateStamp}-${videoData.post.id}_data.json`;
 	const jsonFilePath = path.join(process.cwd(), outputPath, jsonFileName);
 	await fsp.mkdir(path.dirname(jsonFilePath), { recursive: true });
-	
+
 	const outputJSON = JSON.stringify(videoData, null, 4);
 	await fsp.writeFile(jsonFilePath, outputJSON, 'utf-8');
 
 
 	console.log('\n');
 	console.log(`----- ${videoData.post.id} JSON data saved to: ${jsonFilePath}`);
-	console.log('\n');
 	console.log(`----- Downloading: ${downloadUrl}`);
 
 	// Resolve output path logic (previously in resolveOutputPath function)
 	const downloadUrlFixed = safeParseUrl(downloadUrl);
 
 
-	const dateStamp = formatDateStamp();
 	const originalVideoName = downloadUrlFixed ? path.basename(downloadUrlFixed.pathname) : null;
 	const extension = originalVideoName && path.extname(originalVideoName) ? path.extname(originalVideoName) : '.mp4';
 
-	const videoFileName = `${dateStamp}-${id}-${authorId}-${extension}`;
+	const videoFileName = `${dateStamp}_${id}_${authorId}${extension}`;
 
 
 	// Determine output file path

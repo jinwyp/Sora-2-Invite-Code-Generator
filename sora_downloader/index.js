@@ -29,12 +29,15 @@ async function main() {
 
 	try {
 		const data = await downloadSoraVideoAndRemixVideo(url, headers, argv);
+
 		const outputJSONTemp = JSON.stringify(data, null, 4);
 
-        const firstVideo = data.postOriginal.attachments[0];
-        const firstVideoDownloadPath = "downloads/" + data.postOriginal.id;
-        const firstVideoPrompt = firstVideo.prompt
+		console.log('\n');	
+		console.log(`${outputJSONTemp}`);
 
+        const firstVideo = data.postOriginal.attachments[0];
+        const firstVideoDownloadPath = "downloads/" + data.postOriginal.id + "_" + data.profileOriginal.username;
+        const firstVideoPrompt = firstVideo.prompt
 
         await downloadSoraSingleVideo({
             downloadUrl: firstVideo.downloadable_url,

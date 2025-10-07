@@ -41,11 +41,13 @@ The string should include the leading `Bearer ` prefix. The tool will add it aut
 
 ```bash
 
-node index.js --url https://sora.chatgpt.com/explore/ --auth-file token.txt
+node index.js --auth-file token.txt 
 
-node index.js --url https://sora.chatgpt.com/p/s_68e3ba6530ac8191a3e1fed0e939dbd4 --auth-file token.txt --device-id 9d8b579c-3074-44c0-a3f2-69be5ec1ce9f
+node index.js --auth-file token.txt --device-id 9d8b579c-3074-44c0-a3f2-69be5ec1ce9f --url https://sora.chatgpt.com/p/s_68e3ba6530ac8191a3e1fed0e939dbd4
 
-node index.js --url https://sora.chatgpt.com/p/s_68e3da7c3a0881919869e731583da431 --auth-file token.txt --device-id d7260893-5856-41a4-b721-363f2b52660c
+node index.js --auth-file token.txt --device-id d7260893-5856-41a4-b721-363f2b52660c --url https://sora.chatgpt.com/p/s_68e4e852f7048191997a2ae8e252acbc
+
+
 
 
 ```

@@ -53,3 +53,5 @@ The workflow will:
 
 - `tried_codes.json`: Records invite codes that returned a 403 response so they are not retried in future executions.
 - `success_codes_YYYYMMDD.json`: Stores successful invite codes tagged with the run date in UTC (for example, `success_codes_20251004.json`). Legacy `success_codes.json` files are migrated automatically when a new success is recorded.
+
+

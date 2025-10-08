@@ -1,6 +1,6 @@
 'use strict';
 const path = require('path');
-const fsp = require('fs').promises;
+const fs = require('fs');
 const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
 
@@ -27,6 +27,11 @@ const ARG_CONFIG = {
         type: 'string',
         describe: 'Path to a file containing the authorization header/token'
     },
+    'cookie-file': {
+        type: 'string',
+        describe: 'Path to a file containing the cookies'
+    },
+
     'device-id': {
         type: 'string',
         describe: 'Override the OAI-Device-Id header'
@@ -73,13 +78,7 @@ function parseArguments(processArgs) {
 }
 
 
-const DEFAULT_HEADERS = {
-	accept: '*/*',
-    'accept-language': 'en-US,en;q=0.9',
-	'content-type': 'application/json',
-	referer: 'https://sora.chatgpt.com/explore',
-	'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
-};
+
 
 
 
@@ -91,11 +90,84 @@ function ensureBearer(token) {
     return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 }
 
-async function resolveAuthorizationToken(arguments_1, processEnv) {
+function getCookie(arguments_1, processEnv) {
+    if (arguments_1['cookie-file']) {
+        const resolvedPath = path.resolve(process.cwd(), arguments_1['cookie-file'] || "cookies.txt");
+        const contents = fs.readFileSync(resolvedPath, 'utf8');
+        const token = contents.trim();
+        return token;
+    }
+}
+
+function getCookieArray(cookieTxt, options = {}) {
+    const {
+        domain = 'sora.chatgpt.com',
+        path: cookiePathValue = '/',
+        secure = true,
+        httpOnly = true,
+        decodeValues = false,
+        dedupe = true
+    } = options;
+
+    cookieTxt = cookieTxt || "";
+
+    const cookieString = cookieTxt.trim();
+
+
+    if (!cookieString) {
+        return [];
+    }
+
+    const entries = cookieString.split(/;\s*/).filter(Boolean);
+    const cookies = dedupe ? new Map() : [];
+
+    for (const entry of entries) {
+        const separatorIndex = entry.indexOf('=');
+        if (separatorIndex <= 0) {
+            continue;
+        }
+
+        const name = entry.slice(0, separatorIndex).trim();
+        if (!name) {
+            continue;
+        }
+
+        const rawValue = entry.slice(separatorIndex + 1).trim();
+        let value = rawValue;
+
+        if (decodeValues && value) {
+            try {
+                value = decodeURIComponent(value);
+            } catch (error) {
+                // Ignore decoding errors and fall back to the raw value
+                value = rawValue;
+            }
+        }
+
+        const descriptor = {
+            name,
+            value,
+            domain,
+            path: cookiePathValue,
+            httpOnly,
+            secure
+        };
+
+        if (dedupe) {
+            cookies.set(name, descriptor);
+        } else {
+            cookies.push(descriptor);
+        }
+    }
+
+    return dedupe ? Array.from(cookies.values()) : cookies;
+}
+
+function resolveAuthorizationToken(arguments_1, processEnv) {
     if (arguments_1['auth-file']) {
         
-        const resolvedPath = path.resolve(process.cwd(), arguments_1['auth-file']);
-        const contents = await fsp.readFile(resolvedPath, 'utf8');
+        const resolvedPath = path.resolve(process.cwd(), arguments_1['auth-file'] || "token.txt");
+        const contents = fs.readFileSync(resolvedPath, 'utf8');
         const token = contents.trim();
         
         return ensureBearer(token);
@@ -109,14 +181,25 @@ async function resolveAuthorizationToken(arguments_1, processEnv) {
     return envToken ? ensureBearer(envToken.trim()) : null;
 }
 
+const DEFAULT_HEADERS = {
+	'accept': '*/*',
+    'accept-language': 'en-US,en;q=0.9',
+	'content-type': 'application/json',
+	'referer': 'https://sora.chatgpt.com/explore',
+	'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    'origin': 'https://sora.chatgpt.com',
+    'referer': 'https://sora.chatgpt.com/',
+    'oai-device-id': 'd439c49e-4d7f-48e0-98e8-6025343e719c'
+};
 
-async function buildHeaders(arguments_2, processEnv) {
+
+
+function buildHeaders(arguments_2, processEnv) {
     const headers = { ...DEFAULT_HEADERS };
 
-    const authHeaderToken = await resolveAuthorizationToken(arguments_2, processEnv);
-
+    const authHeaderToken = resolveAuthorizationToken(arguments_2, processEnv);
     if (authHeaderToken) {
-        headers.authorization = authHeaderToken;
+        headers['authorization'] = authHeaderToken;
     }
 
     if (arguments_2['device-id']) {
@@ -127,13 +210,19 @@ async function buildHeaders(arguments_2, processEnv) {
         headers['user-agent'] = arguments_2['user-agent'];
     }
 
+    const cookieObj = getCookie(arguments_2, processEnv);
+    if (cookieObj) {
+        headers['cookie'] = cookieObj;
+    }
+    // console.log("cookieString:",headers['cookie'])
     return headers;
 }
 
 module.exports = {
     parseArguments,
     resolveAuthorizationToken,
-    buildHeaders
+    buildHeaders,
+    getCookieArray
 };
 
 

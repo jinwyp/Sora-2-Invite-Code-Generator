@@ -8,7 +8,7 @@ const path = require('path');
 const puppeteer = require('puppeteer');
 
 const { downloadSoraSingleVideo } = require('./sora_get_single_video');
-const { parseArguments, buildHeaders } = require('./utils');
+const { parseArguments, buildHeaders, getCookieArray } = require('./utils');
 
 
 // Load environment variables from a .env file if present
@@ -30,38 +30,147 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 	const browser = await puppeteer.launch({
 		executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
 		headless: options.headless,
-		ignoreHTTPSErrors: true,
-		args: ['--no-sandbox', '--disable-setuid-sandbox', '--lang=en-US,en']
+		args: [
+			'--disable-blink-features=AutomationControlled',
+			'--lang=en-US,en',
+			'--window-size=1440,1000'
+		]
 	});
+
+	const cookies = getCookieArray(headers['cookie']);
 
 	const page = await browser.newPage();
-    await page.setViewport({ width: 1440, height: 1000 });
+	// await page.setExtraHTTPHeaders(headers);
 
-	// Set user agent
-	if (headers['user-agent']) {
-		await page.setUserAgent(headers['user-agent']);
+	for (const cookie of cookies) {
+		await page.setCookie(cookie);
 	}
-	await page.setExtraHTTPHeaders(headers);
+
+	await page.setViewport({ width: 1440, height: 1000 });
 
 	page.on('console', (msg) => {
-		console.log(`----- [browser log type:${msg.type()}]: ${msg.text()}`);
+		console.log(`[--- Browser log type: ${msg.type()}]: ${msg.text()}`);
 	});
 
+	// 设置一个 Promise 来“捕获”我们想要的数据
+
+	let ajaxInfoData = {
+		id : '',
+		remix_count : 0,
+		remixLoopNumber : 0,
+		nextCursor : '',
+		firstVideo: null,
+		remixVideoList: [],
+		pageNoCursor: []
+
+	};
+	const responsePromise = new Promise(resolve => {
+		page.on('response', async (response) => {
+			if (response.url().includes('sora.chatgpt.com/backend/project_y/post')) {
+
+				console.log(`----- AJAX response: ${response.url()}`);
+				
+				try {
+					const responseData = await response.json();
+					// console.log(`----- ${JSON.stringify(responseData, null, 4)}`);
+
+					if (responseData && responseData.post ) {
+						if ( !responseData.hasOwnProperty('children')){
+							ajaxInfoData.firstVideo = responseData;
+							ajaxInfoData.id = responseData.post.id;
+							ajaxInfoData.nextCursor = responseData.post.remix_posts.cursor;
+							ajaxInfoData.remix_count = responseData.post.remix_count;
+
+							const tempRemixCount = responseData.post.remix_posts.items[0]?.post?.remix_count || 0;
+							if (responseData.post.remix_count > 2){
+								ajaxInfoData.remixLoopNumber = Math.ceil(responseData.post.remix_count / 10);
+							}else if (tempRemixCount > 2){
+								ajaxInfoData.remixLoopNumber = Math.ceil(tempRemixCount / 10);
+								ajaxInfoData.remix_count = tempRemixCount;
+							}
+						}
+					}
+
+					if (responseData && responseData.items) {
+						ajaxInfoData.remixVideoList.push(...responseData.items);
+						ajaxInfoData.pageNoCursor.push(responseData.cursor);
+						ajaxInfoData.nextCursor = responseData.cursor;
+					}
+
+					resolve(responseData); 
+				} catch (error) {
+					console.error('Parse json error:', error);
+					resolve(null); 
+				}
+			}
+		});
+	});
+
+
+
 	try {
-		console.log(`Loading page: ${pageUrl}`);
+		console.log(`===== Starting page: ${pageUrl}`);
 		await page.goto(pageUrl, { waitUntil: 'networkidle2', timeout: 600000 });
+
 		await page.waitForSelector('video', { timeout: 200000 });
 		await page.waitForSelector('.truncate', { timeout: 200000 });
+
+		// Wait for remix buttons to load and click the third one using locator API
+
+		const containerSelector = 'div.flex.flex-col.gap-2.p-5';
+		await page.waitForSelector(containerSelector, { timeout: 40000 });
+		let boxDivCount = await page.$eval(containerSelector, (node) => node.childElementCount);
+		// console.log(`----- Detected Total ${boxDivCount} box div`);
+
+		if (boxDivCount > 3){
+			
+			const remixButtonsSelector = 'div.flex.w-fit.items-center.justify-end.gap-2 button';
+			await page.waitForSelector(remixButtonsSelector, { timeout: 40000 });
+			let remixButtonCount = await page.$$eval(remixButtonsSelector, (nodes) => nodes.length);
+			const initialRemixButtonCount = remixButtonCount;
+
+			// console.log(`----- starting remixLoopNumber ${ajaxInfoData.remixLoopNumber} `);
+			if (ajaxInfoData.remixLoopNumber > 0){
+				for (let i=0; i< ajaxInfoData.remixLoopNumber; i++){
+					const lastButtonIndex = 10*i + 3;
+					const nextButtonIndex = 10*i + 4;
+
+					if (remixButtonCount === lastButtonIndex ){
+						const lastRemixButtonSelector = `${remixButtonsSelector}:last-of-type`;
+						await page.locator(lastRemixButtonSelector)
+							.setEnsureElementIsInTheViewport(true)
+							.setWaitForEnabled(true)
+							.setTimeout(5000)
+							.click();
+
+						const needCheckedButtonSelector = `${remixButtonsSelector}:nth-of-type(${nextButtonIndex})`;
+						await page.waitForSelector(needCheckedButtonSelector, { timeout: 40000 });
+						remixButtonCount = await page.$$eval(remixButtonsSelector, (nodes) => nodes.length);
+						// console.log(`----- Detected ${remixButtonCount} remix button after click`);
+					} else {
+						break;
+					}
+				}
+			}
+
+			const remixButtonCountFinal = await page.$$eval(remixButtonsSelector, (nodes) => nodes.length);
+			// console.log(`----- Detected Total ${remixButtonCountFinal} remix button`);
+		}
 
 		// Extract all page data
 		const pageData = await page.evaluate(() => {
 			const data = {
-                pageTitle: '',
-				metadata: {},
-				post: {},
-                prompt: '',
-				author: {},
-				video: {},
+				videoInfo: {
+					metadata: {},
+					pageTitle: '',
+					likesCount: 0,
+					remixCount: 0,
+					prompt: '',
+					authorProfileUrl: '',
+					authorUsername: '',
+					video: {},
+				},
+
 				relatedPosts: [],
                 nextDataJsonData: {},
                 postOriginal: {},
@@ -70,7 +179,7 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 			};
 
             // Extract page title
-			data.pageTitle = document.title;
+			data.videoInfo.pageTitle = document.title;
 
 			// Extract metadata
 			const metaTags = {};
@@ -81,23 +190,23 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 					metaTags[name] = content;
 				}
 			});
-			data.metadata = metaTags;
+			data.videoInfo.metadata = metaTags;
 
             // Extract prompt from meta or page
 			const promptMeta = document.querySelector('meta[name="twitter:description"]');
 			if (promptMeta) {
-				data.prompt = promptMeta.getAttribute('content');
+				data.videoInfo.prompt = promptMeta.getAttribute('content');
 			}
 
 
 			// Extract author info
 			const authorLink = document.querySelector('.font-semibold');
 			if (authorLink) {
-				data.author.profileUrl = authorLink.getAttribute('href');
+				data.videoInfo.authorProfileUrl = authorLink.getAttribute('href');
 			}
             const authorName = document.querySelector('.truncate');
             if (authorName) {
-                data.author.username = authorName.textContent?.trim();
+                data.videoInfo.authorUsername = authorName.textContent?.trim();
             }
 
 			// Extract like count
@@ -105,7 +214,7 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 			if (likeButton) {
 				const likeCountSpan = likeButton.querySelector('span.truncate');
 				if (likeCountSpan) {
-					data.post.likes = parseInt(likeCountSpan.textContent?.trim()) || 0;
+					data.videoInfo.likesCount = parseInt(likeCountSpan.textContent?.trim()) || 0;
 				}
 			}
 
@@ -114,19 +223,18 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 			if (remixButton) {
 				const remixCountSpan = remixButton.querySelector('span.truncate');
 				if (remixCountSpan) {
-					data.post.remixCount = parseInt(remixCountSpan.textContent?.trim()) || 0;
+					data.videoInfo.remixCount = parseInt(remixCountSpan.textContent?.trim()) || 0;
 				}
 			}
-
 
 
 			// Extract video information
 			const video = document.querySelector('main video') || document.querySelector('video');
 			if (video) {
-				data.video.currentSrc = video.currentSrc;
-				data.video.src = video.getAttribute('src');
-				data.video.poster = video.getAttribute('poster');
-				
+				data.videoInfo.video.currentSrc = video.currentSrc;
+				data.videoInfo.video.src = video.getAttribute('src');
+				data.videoInfo.video.poster = video.getAttribute('poster');
+
 				const sources = [];
 				video.querySelectorAll('source').forEach(source => {
 					sources.push({
@@ -134,10 +242,10 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 						type: source.getAttribute('type')
 					});
 				});
-				data.video.sources = sources;
+				data.videoInfo.video.sources = sources;
 			}
 
-
+/* 
 			// Extract series/related post IDs from inline scripts
 			const seriesIds = new Set();
 			document.querySelectorAll('script').forEach(script => {
@@ -225,13 +333,25 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 					}
 				}
 			});
-			
+			 */
 			return data;
 		});
+		console.log('\n')
+		console.log('========== Page scraped successfully');
+/* 
+		if (pageData.postOriginal.attachments[0] && pageData.postOriginal.attachments[0].prompt) {
+			const promptText = pageData.postOriginal.attachments[0].prompt;
+			console.log(`----- Extracted prompt: ${promptText}`);
+			if (promptText.includes('17')) {
+				pageData.postOriginal.attachments[0].prompt = pageData.metadata['twitter:description'];
+				pageData.nextDataJsonData.post.attachments[0].prompt = pageData.metadata['twitter:description'];
+			}
+		}
+ */
+		await responsePromise;
+		ajaxInfoData.videoInfo = pageData.videoInfo;
 
-		console.log('✓ Page scraped successfully');
-		
-		return pageData;
+		return ajaxInfoData;
 
 	} catch (error) {
 		console.error('Error scraping page:', error.message);

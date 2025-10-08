@@ -7,6 +7,7 @@ const path = require('path');
 const { parseArguments, buildHeaders } = require('./utils');
 const { downloadSoraVideoAndRemixVideo } = require('./sora_get_single_video_page_list');
 const { downloadSoraSingleVideo } = require('./sora_get_single_video');
+const { profile } = require('console');
 
 // Load environment variables from a .env file if present
 try {
@@ -29,48 +30,55 @@ async function main() {
 
 	try {
 		const data = await downloadSoraVideoAndRemixVideo(url, headers, argv);
+		const saveFileJson = {
+			videoInfo: data.videoInfo,
+			post: data.firstVideo.post,
+			profile: data.firstVideo.profile,
+		}
 
-		const outputJSONTemp = JSON.stringify(data, null, 4);
+		const outputJSONTemp = JSON.stringify(saveFileJson, null, 4);
+		// console.log('\n');
+		// console.log(`${outputJSONTemp}`);
 
-		console.log('\n');	
-		console.log(`${outputJSONTemp}`);
-
-        const firstVideo = data.postOriginal.attachments[0];
-        const firstVideoDownloadPath = "downloads/" + data.postOriginal.id + "_" + data.profileOriginal.username;
-        const firstVideoPrompt = firstVideo.prompt
+        const firstVideo = data.firstVideo.post.attachments[0];
+        const firstVideoDownloadPath = "downloads/" + data.firstVideo.post.id + "_" + data.firstVideo.profile.username;
 
         await downloadSoraSingleVideo({
             downloadUrl: firstVideo.downloadable_url,
             outputPath: firstVideoDownloadPath,
-            id: data.postOriginal.id,
-            authorId: data.profileOriginal.username,
-            promptValue: firstVideoPrompt,
+            id: data.firstVideo.post.id,
+            authorId: data.firstVideo.profile.username,
+            promptValue: firstVideo.prompt,
             headers,
             agent,
-			videoData:data.nextDataJsonData
+			videoData:saveFileJson
         });
 
+		const tempRemixVideoList = data.remixVideoList;
+		const tempRemixVideoListLength = Array.isArray(tempRemixVideoList) ? tempRemixVideoList.length : 0;
 
-        if (Array.isArray(data.postOriginal.remix_posts.items) && data.postOriginal.remix_posts.items.length > 0) {
-            data.postOriginal.remix_posts.items.forEach(async item => {
+        if (Array.isArray(tempRemixVideoList) && tempRemixVideoListLength > 0) {
 
+			
+			for (let i = 0; i < tempRemixVideoListLength; i++) {
+				const item = tempRemixVideoList[i];
 				console.log('\n');
-                console.log(`----- remix: ${item.post.id}`);
+				console.log(`--- remix video: ${item.post.id}`);
 
-                const remixPostVideo = item.post.attachments[0];
-                const remixVideoPrompt = remixPostVideo.prompt;
+				const remixVideoUrl = item.post.attachments[0];
 
                 await downloadSoraSingleVideo({
-                    downloadUrl: remixPostVideo.downloadable_url,
+                    downloadUrl: remixVideoUrl.downloadable_url,
                     outputPath: firstVideoDownloadPath,
                     id: item.post.id,
                     authorId: item.profile.username,
-                    promptValue: remixVideoPrompt,
+                    promptValue: remixVideoUrl.prompt,
                     headers,
                     agent,
 					videoData: item
                 });
-            });
+			}
+            
         }
 
 	} catch (error) {

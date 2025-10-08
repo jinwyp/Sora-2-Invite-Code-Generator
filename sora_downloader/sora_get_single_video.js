@@ -114,12 +114,12 @@ function safeParseUrl(rawUrl) {
 }
 
 
-async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, promptValue, headers, agent, videoData }) {
+async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, headers, agent, videoData }) {
 	
 	// Write JSON data to file
 	const dateStamp = formatDateStamp();
 
-	const jsonFileName = `${dateStamp}-${videoData.post.id}_data.json`;
+	const jsonFileName = `${dateStamp}_${videoData.post.id}_${authorId}.json`;
 	const jsonFilePath = path.join(process.cwd(), outputPath, jsonFileName);
 	await fsp.mkdir(path.dirname(jsonFilePath), { recursive: true });
 
@@ -128,8 +128,8 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 
 
 	console.log('\n');
-	console.log(`----- ${videoData.post.id} JSON data saved to: ${jsonFilePath}`);
-	console.log(`----- Downloading: ${downloadUrl}`);
+	console.log(`-- ID: ${videoData.post.id} | JSON saved to: ${jsonFilePath}`);
+	console.log(`-- Download url: ${downloadUrl}`);
 
 	// Resolve output path logic (previously in resolveOutputPath function)
 	const downloadUrlFixed = safeParseUrl(downloadUrl);
@@ -159,12 +159,12 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 		await ensureDirectory(isFilePath ? path.dirname(resolvedOutput) : resolvedOutput);
 	}
 
-	console.log(`----- outputFilePath: ${outputFilePath}`);
+	console.log(`-- Downloading: ${outputFilePath}`);
 
 	// Check if file already exists
 	try {
 		await fsp.access(outputFilePath, fs.constants.F_OK);
-		console.log(`===== File already exists, skipping download: ${outputFilePath}`);
+		console.log(`===== File already exists, skipping download: ${videoData.post.id}`);
 		return;
 	} catch (error) {
 		// File doesn't exist, proceed with download
@@ -177,7 +177,7 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 	const totalSize = Number(response.headers['content-length']) || null;
 
 	if (totalSize) {
-		console.log(` === Size: ${formatBytes(totalSize)}`);
+		console.log(`----- Size: ${formatBytes(totalSize)}`);
 
 		let downloaded = 0;
 		response.on('data', (chunk) => {
@@ -192,7 +192,7 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 
 	const writeStream = fs.createWriteStream(outputFilePath);
 	await pipeline(response, writeStream);
-	console.log('===== ===== Download completed');
+	console.log(`===== Download completed: ${outputFilePath}`);
 }
 
 
@@ -216,10 +216,11 @@ async function main() {
 	await downloadSoraSingleVideo({
 		downloadUrl,
 		outputPath: argv.output,
+		id: 'unknown_id',
 		authorId,
-		promptValue,
 		headers,
-		agent
+		agent,
+		videoData: { }
 	});
 }
 

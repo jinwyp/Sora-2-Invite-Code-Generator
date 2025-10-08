@@ -43,14 +43,30 @@ The string should include the leading `Bearer ` prefix. The tool will add it aut
 
 node index.js --auth-file token.txt 
 
-node index.js --auth-file token.txt --device-id 9d8b579c-3074-44c0-a3f2-69be5ec1ce9f --url https://sora.chatgpt.com/p/s_68e3ba6530ac8191a3e1fed0e939dbd4
+node index.js --auth-file token.txt --device-id d439c49e-4d7f-48e0-98e8-6025343e719c --url https://sora.chatgpt.com/p/s_68e4c4f45b748191827439c9e56e83cc
 
-node index.js --auth-file token.txt --device-id d7260893-5856-41a4-b721-363f2b52660c --url https://sora.chatgpt.com/p/s_68e4e852f7048191997a2ae8e252acbc
+node index.js --cookie-file cookies.txt  --url https://sora.chatgpt.com/p/s_68e204cdaed081919b4fe2cfa2be5c10
+
 
 
 
 
 ```
+
+### Working with browser cookies
+
+If you copy the `Cookie` header from your browser developer tools, you can convert it into the array format required by tooling such as Puppeteer:
+
+```js
+const { getCookieArray } = require('./utils');
+
+(async () => {
+   const cookies = await getCookieArray('cookies.txt');
+   console.log(cookies);
+})();
+```
+
+`getCookieArray` assumes the cookies belong to `sora.chatgpt.com`, sets the path to `/`, and marks every cookie as `secure` and `httpOnly`. You can override these defaults by passing an options object, for example `getCookieArray('cookies.txt', { secure: false })`.
 
 Common options:
 
@@ -91,3 +107,7 @@ sora-downloader --url https://sora.chatgpt.com/explore/<slug>
 - **403 Forbidden** – The video may be private or the token lacks access. Double-check the URL and token.
 - **429 Too Many Requests** – Wait a few minutes to respect the server rate limits.
 - **No video sources found** – The explore page structure may have changed. Use `--dry-run` to inspect any detected URLs and open an issue with the HTML snippet if needed.
+
+WZXQ3N
+YPDGZ8
+

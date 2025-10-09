@@ -3,19 +3,20 @@
   "version": "1.0.0",
   "description": "CLI tool for downloading videos from sora.chatgpt.com",
   "bin": {
-    "sora-downloader": "index.js"
+    "sora-downloader": "index2.js"
   },
-  "main": "index.js",
+  "main": "index2.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node index2.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.6.0",
+    "axios": "^1.12.2",
+    "cheerio": "^1.1.2",
     "puppeteer": "^24.23.0",
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   }
 }

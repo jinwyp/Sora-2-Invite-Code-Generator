@@ -7,7 +7,7 @@ const path = require('path');
 const { parseArguments, buildHeaders } = require('./utils');
 const { downloadSoraVideoAndRemixVideo } = require('./sora_get_single_video_page_list');
 const { downloadSoraSingleVideo } = require('./sora_get_single_video');
-const { profile } = require('console');
+
 
 // Load environment variables from a .env file if present
 try {
@@ -19,7 +19,6 @@ try {
 
 async function main() {
 	const argv = parseArguments(process.argv);
-    const agent = argv['skip-cert-check'] ? new https.Agent({ rejectUnauthorized: false }) : undefined;
     
 
 	const url = argv.url;
@@ -40,6 +39,8 @@ async function main() {
 		// console.log('\n');
 		// console.log(`${outputJSONTemp}`);
 
+		let videoCounter = 11
+
         const firstVideo = data.firstVideo.post.attachments[0];
         const firstVideoDownloadPath = "downloads/" + data.firstVideo.post.id + "_" + data.firstVideo.profile.username;
 
@@ -48,10 +49,9 @@ async function main() {
             outputPath: firstVideoDownloadPath,
             id: data.firstVideo.post.id,
             authorId: data.firstVideo.profile.username,
-            promptValue: firstVideo.prompt,
             headers,
-            agent,
-			videoData:saveFileJson
+			videoData:saveFileJson,
+			videoCounter
         });
 
 		const tempRemixVideoList = data.remixVideoList;
@@ -59,26 +59,21 @@ async function main() {
 
         if (Array.isArray(tempRemixVideoList) && tempRemixVideoListLength > 0) {
 
-			
 			for (let i = 0; i < tempRemixVideoListLength; i++) {
+				videoCounter = videoCounter + 1;
 				const item = tempRemixVideoList[i];
-				console.log('\n');
-				console.log(`--- remix video: ${item.post.id}`);
 
 				const remixVideoUrl = item.post.attachments[0];
-
                 await downloadSoraSingleVideo({
                     downloadUrl: remixVideoUrl.downloadable_url,
                     outputPath: firstVideoDownloadPath,
                     id: item.post.id,
                     authorId: item.profile.username,
-                    promptValue: remixVideoUrl.prompt,
                     headers,
-                    agent,
-					videoData: item
+					videoData: item,
+					videoCounter
                 });
 			}
-            
         }
 
 	} catch (error) {

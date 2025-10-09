@@ -41,14 +41,13 @@ function buildDownloadHeaders(baseHeaders, downloadUrl) {
 	return headers;
 }
 
-function buildRequestOptions(downloadUrl, headers, agent) {
+function buildRequestOptions(downloadUrl, headers) {
 	const urlObj = new URL(downloadUrl);
 	return {
 		protocol: urlObj.protocol,
 		hostname: urlObj.hostname,
 		path: `${urlObj.pathname}${urlObj.search}`,
-		headers,
-		agent
+		headers
 	};
 }
 
@@ -114,12 +113,12 @@ function safeParseUrl(rawUrl) {
 }
 
 
-async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, headers, agent, videoData }) {
+async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, headers, videoData, videoCounter = 11 }) {
 	
 	// Write JSON data to file
 	const dateStamp = formatDateStamp();
 
-	const jsonFileName = `${dateStamp}_${videoData.post.id}_${authorId}.json`;
+	const jsonFileName = `${dateStamp}_${videoCounter}_${videoData.post.id}_${authorId}.json`;
 	const jsonFilePath = path.join(process.cwd(), outputPath, jsonFileName);
 	await fsp.mkdir(path.dirname(jsonFilePath), { recursive: true });
 
@@ -138,7 +137,7 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 	const originalVideoName = downloadUrlFixed ? path.basename(downloadUrlFixed.pathname) : null;
 	const extension = originalVideoName && path.extname(originalVideoName) ? path.extname(originalVideoName) : '.mp4';
 
-	const videoFileName = `${dateStamp}_${id}_${authorId}${extension}`;
+	const videoFileName = `${dateStamp}_${videoCounter}_${id}_${authorId}${extension}`;
 
 
 	// Determine output file path
@@ -171,7 +170,7 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 	}
 
 	const sanitizedHeaders = buildDownloadHeaders(headers, downloadUrl);
-	const requestOptions = buildRequestOptions(downloadUrl, sanitizedHeaders, agent);
+	const requestOptions = buildRequestOptions(downloadUrl, sanitizedHeaders);
 
 	const response = await performHttpRequest(requestOptions);
 	const totalSize = Number(response.headers['content-length']) || null;
@@ -203,7 +202,6 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 
 async function main() {
 	const argv = parseArguments( process.argv );
-	const agent = argv['skip-cert-check'] ? new https.Agent({ rejectUnauthorized: false }) : undefined;
 
 	const headers = buildHeaders(argv, process.env);
 
@@ -219,8 +217,7 @@ async function main() {
 		id: 'unknown_id',
 		authorId,
 		headers,
-		agent,
-		videoData: { }
+		videoData: {}
 	});
 }
 

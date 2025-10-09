@@ -78,8 +78,10 @@ async function downloadSoraVideoAndRemixVideo(pageUrl, headers, options = {}) {
 						if ( !responseData.hasOwnProperty('children')){
 							ajaxInfoData.firstVideo = responseData;
 							ajaxInfoData.id = responseData.post.id;
-							ajaxInfoData.nextCursor = responseData.post.remix_posts.cursor;
 							ajaxInfoData.remix_count = responseData.post.remix_count;
+							
+							ajaxInfoData.nextCursor = responseData.post.remix_posts.cursor;
+							ajaxInfoData.remixVideoList.push(...responseData.post.remix_posts.items);
 
 							const tempRemixCount = responseData.post.remix_posts.items[0]?.post?.remix_count || 0;
 							if (responseData.post.remix_count > 2){

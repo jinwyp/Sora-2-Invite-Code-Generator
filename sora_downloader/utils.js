@@ -5,6 +5,30 @@ const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
 
 
+/**
+ * 从 URL 中提取 ID
+ * @param {string} url - 完整的 URL (如: https://sora.chatgpt.com/p/s_68e5d5037b4c8191b33992ce7f8feaee)
+ * @returns {string|null} ID (如: s_68e5d5037b4c8191b33992ce7f8feaee) 或 null
+ */
+function extractIdFromUrl(url) {
+    // 如果输入已经是 ID 格式，直接返回
+    if (url.startsWith('s_') && !url.includes('/')) {
+        return url;
+    }
+    
+    // 使用正则表达式匹配 s_ 开头的 ID
+    // 支持多种 URL 格式:
+    // - https://sora.chatgpt.com/p/s_68e5d5037b4c8191b33992ce7f8feaee
+    // - https://sora.chatgpt.com/backend/project_y/post/s_68e75d088d0881918a92461a0f7aacf5
+    const match = url.match(/\/(s_[a-f0-9]+)/i);
+    
+    if (match && match[1]) {
+        return match[1];
+    }
+    
+    return null;
+}
+
 
 const ARG_CONFIG = {
     url: {
@@ -63,7 +87,6 @@ const ARG_CONFIG = {
     }
 };
 
-
 function parseArguments(processArgs) {
 	const parser = yargs(hideBin( processArgs ));
 	const width = typeof parser.terminalWidth === 'function' ? parser.terminalWidth() : (process.stdout && process.stdout.columns ? process.stdout.columns : 120);
@@ -110,9 +133,7 @@ function getCookieArray(cookieTxt, options = {}) {
     } = options;
 
     cookieTxt = cookieTxt || "";
-
     const cookieString = cookieTxt.trim();
-
 
     if (!cookieString) {
         return [];
@@ -219,6 +240,7 @@ function buildHeaders(arguments_2, processEnv) {
 }
 
 module.exports = {
+    extractIdFromUrl,
     parseArguments,
     resolveAuthorizationToken,
     buildHeaders,

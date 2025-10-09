@@ -45,9 +45,9 @@ node index.js --auth-file token.txt
 
 node index.js --auth-file token.txt --device-id d439c49e-4d7f-48e0-98e8-6025343e719c --url https://sora.chatgpt.com/p/s_68e4c4f45b748191827439c9e56e83cc
 
-node index.js --cookie-file cookies.txt  --url https://sora.chatgpt.com/p/s_68e204cdaed081919b4fe2cfa2be5c10
+node index.js --cookie-file cookies.txt  --url https://sora.chatgpt.com/p/s_68df7baf0d9481919c386892e5085d71
 
-
+node index2.js --cookie-file cookies.txt --auth-file token.txt --url https://sora.chatgpt.com/p/s_68e5f48d95a08191975ce1ca47b863e4
 
 
 

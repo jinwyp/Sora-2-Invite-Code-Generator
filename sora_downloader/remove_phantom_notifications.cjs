@@ -13,7 +13,7 @@ function runShellCommand(command) {
   });
 }
 
-let _githubToken = "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";
+let _githubToken = "";
 async function getGithubToken() {
   if (!_githubToken) {
     _githubToken = await runShellCommand("gh auth token");

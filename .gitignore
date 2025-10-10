@@ -144,3 +144,5 @@ vite.config.ts.timestamp-*
 
 sora_downloader/downloads
 token.txt
+cookies.txt
+cookies2.txt

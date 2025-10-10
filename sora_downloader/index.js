@@ -4,9 +4,9 @@
 
 const path = require('path');
 
-const { parseArguments, buildHeaders } = require('./utils');
+const { formatDateStamp, parseArguments, buildHeaders } = require('./utils');
 const { downloadSoraVideoAndRemixVideo } = require('./sora_get_single_video_page_list');
-const { downloadSoraSingleVideo } = require('./sora_get_single_video');
+const { downloadSoraSingleVideo } = require('./sora_download_single_video');
 
 
 // Load environment variables from a .env file if present
@@ -40,9 +40,10 @@ async function main() {
 		// console.log(`${outputJSONTemp}`);
 
 		let videoCounter = 11
+		const dateStamp = formatDateStamp();
 
         const firstVideo = data.firstVideo.post.attachments[0];
-        const firstVideoDownloadPath = "downloads/" + data.firstVideo.post.id + "_" + data.firstVideo.profile.username;
+        const firstVideoDownloadPath = `downloads/${dateStamp}_${data.firstVideo.post.id}_${data.firstVideo.profile.username}`;
 
         await downloadSoraSingleVideo({
             downloadUrl: firstVideo.downloadable_url,

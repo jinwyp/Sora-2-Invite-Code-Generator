@@ -8,16 +8,7 @@ const path = require('path');
 const https = require('https');
 const { pipeline } = require('stream/promises');
 
-
-const { parseArguments, buildHeaders } = require('./utils');
-// Load environment variables from a .env file if present
-try {
-	require('dotenv').config();
-} catch (error) {
-	// dotenv is optional; ignore if not installed
-}
-
-
+const { formatDateStamp, safeParseUrl } = require('./utils');
 
 
 
@@ -41,22 +32,22 @@ function buildDownloadHeaders(baseHeaders, downloadUrl) {
 	return headers;
 }
 
-function buildRequestOptions(downloadUrl, headers) {
+function buildRequestOptions(headers, downloadUrl) {
+	const sanitizedHeaders = buildDownloadHeaders(headers, downloadUrl);
 	const urlObj = new URL(downloadUrl);
+
 	return {
 		protocol: urlObj.protocol,
 		hostname: urlObj.hostname,
 		path: `${urlObj.pathname}${urlObj.search}`,
-		headers
+		sanitizedHeaders
 	};
 }
 
 function performHttpRequest(options) {
 	const protocolModule = options.protocol === 'http:' ? require('http') : require('https');
 	return new Promise((resolve, reject) => {
-		const request = protocolModule.request(
-			options,
-			(response) => {
+		const request = protocolModule.request(options, (response) => {
 				const statusCode = response.statusCode || 0;
 				if (statusCode >= 200 && statusCode < 400) {
 					resolve(response);
@@ -97,20 +88,7 @@ function formatBytes(bytes) {
 	return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
-function formatDateStamp() {
-	const now = new Date();
-	const yyyy = now.getFullYear();
-	const mm = String(now.getMonth() + 1).padStart(2, '0');
-	const dd = String(now.getDate()).padStart(2, '0');
-	return `${yyyy}${mm}${dd}`;
-}
-function safeParseUrl(rawUrl) {
-	try {
-		return new URL(rawUrl);
-	} catch (error) {
-		return null;
-	}
-}
+
 
 
 async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, headers, videoData, videoCounter = 11 }) {
@@ -132,7 +110,6 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 
 	// Resolve output path logic (previously in resolveOutputPath function)
 	const downloadUrlFixed = safeParseUrl(downloadUrl);
-
 
 	const originalVideoName = downloadUrlFixed ? path.basename(downloadUrlFixed.pathname) : null;
 	const extension = originalVideoName && path.extname(originalVideoName) ? path.extname(originalVideoName) : '.mp4';
@@ -169,10 +146,10 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 		// File doesn't exist, proceed with download
 	}
 
-	const sanitizedHeaders = buildDownloadHeaders(headers, downloadUrl);
-	const requestOptions = buildRequestOptions(downloadUrl, sanitizedHeaders);
 
+	const requestOptions = buildRequestOptions(headers, downloadUrl);
 	const response = await performHttpRequest(requestOptions);
+
 	const totalSize = Number(response.headers['content-length']) || null;
 
 	if (totalSize) {
@@ -185,10 +162,9 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 			// process.stdout.write(`    Progress: ${percent}% (${formatBytes(downloaded)}/${formatBytes(totalSize)})\r`);
 		});
 		response.on('end', () => {
-			process.stdout.write('\n');
+			process.stdout.write('');
 		});
 	}
-
 	const writeStream = fs.createWriteStream(outputFilePath);
 	await pipeline(response, writeStream);
 	console.log(`===== Download completed: ${outputFilePath}`);
@@ -201,27 +177,8 @@ async function downloadSoraSingleVideo({ downloadUrl, outputPath, id, authorId, 
 
 
 async function main() {
-	const argv = parseArguments( process.argv );
-
-	const headers = buildHeaders(argv, process.env);
-
-	if (!headers.authorization) {
-		console.warn('No authorization token provided. Requests may fail with 401/403 responses.');
-	}
-
-	const downloadUrl = argv.url;
-
-	await downloadSoraSingleVideo({
-		downloadUrl,
-		outputPath: argv.output,
-		id: 'unknown_id',
-		authorId,
-		headers,
-		videoData: {}
-	});
+	console.log('\n Sora Single Video Downloader\n');
 }
-
-
 
 if (require.main === module) {
 	main().catch((error) => {

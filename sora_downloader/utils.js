@@ -5,8 +5,26 @@ const { hideBin } = require('yargs/helpers');
 const yargs = require('yargs/yargs');
 
 
+
+function formatDateStamp() {
+	const now = new Date();
+	const yyyy = now.getFullYear();
+	const mm = String(now.getMonth() + 1).padStart(2, '0');
+	const dd = String(now.getDate()).padStart(2, '0');
+	return `${yyyy}${mm}${dd}`;
+}
+
+
+function safeParseUrl(rawUrl) {
+	try {
+		return new URL(rawUrl);
+	} catch (error) {
+		return null;
+	}
+}
+
 /**
- * 从 URL 中提取 ID
+ * get sora video ID from URL
  * @param {string} url - 完整的 URL (如: https://sora.chatgpt.com/p/s_68e5d5037b4c8191b33992ce7f8feaee)
  * @returns {string|null} ID (如: s_68e5d5037b4c8191b33992ce7f8feaee) 或 null
  */
@@ -28,6 +46,7 @@ function extractIdFromUrl(url) {
     
     return null;
 }
+
 
 
 const ARG_CONFIG = {
@@ -214,7 +233,6 @@ const DEFAULT_HEADERS = {
 };
 
 
-
 function buildHeaders(arguments_2, processEnv) {
     const headers = { ...DEFAULT_HEADERS };
 
@@ -240,6 +258,8 @@ function buildHeaders(arguments_2, processEnv) {
 }
 
 module.exports = {
+    formatDateStamp,
+    safeParseUrl,
     extractIdFromUrl,
     parseArguments,
     resolveAuthorizationToken,

@@ -3,8 +3,8 @@ const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
 
-const { extractIdFromUrl, parseArguments, buildHeaders, getCookieArray } = require('./utils');
-const { downloadSoraSingleVideo } = require('./sora_get_single_video');
+const { formatDateStamp, extractIdFromUrl, parseArguments, buildHeaders } = require('./utils');
+const { downloadSoraSingleVideo } = require('./sora_download_single_video');
 
 
 
@@ -39,8 +39,6 @@ function normalizeUrl(urlOrId, cursor = '') {
 
 
 
-
-
 async function getSingleVideoInfo(videoId, headers, cursor) {
     url = normalizeUrl(videoId, cursor || '');
 
@@ -60,24 +58,11 @@ async function getSingleVideoInfo(videoId, headers, cursor) {
         return response.data;
 
     } catch (error) {
-        console.error('请求失败:', error.message);
+        console.error('请求失败 axios error:', error.message);
         throw error;
     }
 }
 
-/**
- * 保存 HTML 源代码到文件
- */
-function saveHtmlToFile(html, outputPath) {
-    try {
-        fs.writeFileSync(outputPath, html, 'utf-8');
-        console.log('HTML 源代码已保存到:', outputPath);
-        return true;
-    } catch (error) {
-        console.error('保存文件失败:', error.message);
-        return false;
-    }
-}
 
 
 /**
@@ -118,7 +103,6 @@ async function main() {
         }
 
         console.log(`\n--- 检测到 remix_count: ${remixCount} 个 remix 视频`);
-        // console.log(pageNoNextCursor)
 
         if (pageNoNextCursor){
             for (let i=0; i< 20 ; i++){
@@ -137,11 +121,11 @@ async function main() {
             }
         }
 
-
+        const dateStamp = formatDateStamp();
         let videoCounter = 11
 
         const downloadFirstVideo = firstVideoInfo.post.attachments[0];
-        const downloadFirstVideoPath = "downloads/" + firstVideoInfo.post.id + "_" + firstVideoInfo.profile.username;
+        const downloadFirstVideoPath = `downloads/${dateStamp}_${firstVideoInfo.post.id}_${firstVideoInfo.profile.username}`;
 
         await downloadSoraSingleVideo({
             downloadUrl: downloadFirstVideo.downloadable_url,
@@ -161,7 +145,6 @@ async function main() {
 			for (let i = 0; i < tempRemixVideoListLength; i++) {
                 videoCounter = videoCounter + 1;
 				const item = remixVideoList[i];
-
 				const remixVideoUrl = item.post.attachments[0];
 
                 await downloadSoraSingleVideo({
@@ -191,7 +174,6 @@ if (require.main === module) {
 
 module.exports = {
     getSingleVideoInfo,
-    saveHtmlToFile,
     normalizeUrl,
     extractIdFromUrl
 };

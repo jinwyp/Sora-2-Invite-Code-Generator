@@ -7,7 +7,7 @@ const fsp = require('fs/promises');
 const path = require('path');
 const puppeteer = require('puppeteer');
 
-const { downloadSoraSingleVideo } = require('./sora_get_single_video');
+const { downloadSoraSingleVideo } = require('./sora_download_single_video');
 const { parseArguments, buildHeaders, getCookieArray } = require('./utils');
 
 
